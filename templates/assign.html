@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <title>Asignaciones</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="../images/Diseño sin título (1).png" type="image/x-icon">
+    <link rel="stylesheet" href="../static/css/styles.css">
+  </head>
+  <body class="bg-light">
+    <div class="container py-5">
+      <h1 class="text-center mb-3">Asignaciones Completadas</h1>
+      <div class="row mb-4">
+        {% for leader, info in leader_info.items() %}
+          <div class="col-md-4 mb-2 text-center">
+            <div class="badge bg-info me-1">{{ leader }}</div>
+            <div class="badge bg-secondary me-1">Horario: {{ info.horario }}</div>
+            <div class="badge bg-secondary">Servicio: {{ info.servicio }}</div>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="text-center mb-4">
+        <span class="badge bg-warning mb-2">Ideal por líder: {{ ideal }} reps</span><br>
+        <a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{{ excel_data }}"
+           download="asignaciones.xlsx" class="btn btn-outline-success">Descargar Excel</a>
+      </div>
+      <div class="row g-4">
+        {% for leader, reps in assignments.items() %}
+          <div class="col-sm-6 col-md-4">
+            <div class="card h-100 shadow-sm">
+              <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">{{ leader }}</h5>
+                <small>Asignados: {{ reps|length }}</small>
+              </div>
+              <div class="card-body">
+                {% if reps %}
+                  <ul class="list-group list-group-flush">
+                    {% for rep in reps %}
+                      <li class="list-group-item">{{ rep }}</li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="text-muted">Sin reps asignados.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="text-center mt-4">
+        <a href="{{ url_for('upload') }}" class="btn btn-primary">Volver al inicio</a>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

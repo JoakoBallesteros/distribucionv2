@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Configura Líderes</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="select-page">
+  <div class="wrapper">
+    <div class="menu-card">
+      <h1>Configuración de Líderes</h1>
+
+      <form
+        id="configForm"
+        method="post"
+        action="{{ url_for('select', filename=filename) }}"
+      >
+        <div class="menu-grid">
+          {% for L in leaders %}
+            <div class="leader-card">
+              <h5 class="text-white">{{ L }}</h5>
+
+              <!-- Hora de inicio -->
+              <label class="form-label">Inicio</label>
+              <select
+                name="start_{{ L }}"
+                class="form-select mb-2"
+                required
+              >
+                <option value="">-- Elige hora --</option>
+                {% for t in time_options %}
+                  <option value="{{ t }}">{{ t }}</option>
+                {% endfor %}
+              </select>
+
+              <!-- Puesto en la pirámide -->
+              <label class="form-label">Puesto</label>
+              <select
+                name="position_{{ L }}"
+                class="form-select mb-2"
+                required
+              >
+                <option value="">-- Elige puesto --</option>
+                <option value="Líder">Líder</option>
+                <option value="Referente de Líder">Referente de Líder</option>
+                <option value="Pusher">Pusher</option>
+              </select>
+
+              <!-- Skill (Servicio) opcional -->
+              <label class="form-label">Skill (Servicio) opcional</label>
+              <select
+                name="skill_{{ L }}"
+                class="form-select mb-2"
+              >
+                <option value="">-- Ninguno --</option>
+                {% for s in services %}
+                  <option value="{{ s }}">{{ s }}</option>
+                {% endfor %}
+              </select>
+
+            </div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn-generate mt-4">
+          Generar Distribuciones
+        </button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

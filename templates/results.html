@@ -1,0 +1,149 @@
+<!DOCTYPE html> 
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Resultados de Distribuciones</title>
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    /* Marca al “pusher” (o referente/líder en último recurso) con borde punteado rojo */
+    .needs-removal .card-header {
+      border: 2px dashed #f44336 !important;
+    }
+    .btn-eliminate {
+      padding: 0.2rem 0.6rem;
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body class="select-page">
+  <div class="wrapper">
+    <div class="menu-card">
+      <h1>Distribuciones</h1>
+
+      <!-- Volver a selección -->
+      <a href="{{ url_for('select', filename=filename) }}" class="back-button">
+        ← Volver
+      </a>
+
+      <!-- Guardar y descargar tras posible reorden -->
+      <form id="reassignForm"
+            method="post"
+            action="{{ url_for('reassign', filename=filename) }}"
+            style="text-align:center; margin:1.5rem 0;">
+        <input type="hidden" name="reassignments" id="reassignments" value="">
+        <button type="submit" class="btn-generate" onclick="prepareReassign()">
+          📥 Guardar y descargar
+        </button>
+      </form>
+
+      <div class="menu-grid">
+        {% for leader in ordered_leaders %}
+          {% set infos = assignments[leader] %}
+          <div class="menu-item {% if leader == pusher %}needs-removal{% endif %}">
+            <div class="card-header d-flex justify-content-between align-items-center mb-2">
+              <div class="d-flex align-items-center">
+                <strong>{{ leader }}</strong>
+                <span class="badge bg-info ms-2">{{ positions[leader] }}</span>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-secondary">{{ infos|length }} reps</span>
+                {% if leader == pusher %}
+                  <button type="button"
+                          class="btn btn-sm btn-danger btn-eliminate"
+                          onclick="eliminateLeader('{{ leader }}')">
+                    Eliminar
+                  </button>
+                {% endif %}
+              </div>
+            </div>
+
+            <ul class="list-group list-group-flush" data-leader="{{ leader }}">
+              {% if infos %}
+                {% for info in infos %}
+                  <li class="list-group-item d-flex justify-content-between align-items-center {% if info.status == 'LP' %}bg-warning{% endif %}"
+                      data-rep="{{ info.rep }}">
+                    <div>{{ info.rep }}</div>
+                    <div class="text-end">
+                      <span class="badge bg-secondary">{{ info.service }}</span>
+                      <div><small>{{ info.ingreso }}</small></div>
+                    </div>
+                  </li>
+                {% endfor %}
+              {% else %}
+                <li class="list-group-item text-muted">
+                  No hay reps asignados
+                </li>
+              {% endif %}
+            </ul>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- SortableJS para drag-and-drop -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <script>
+    // Actualiza el badge tras mover reps
+    function updateCount(list) {
+      const cnt = list.children.length;
+      const leader = list.dataset.leader;
+      const badge = document.querySelector(
+        `.menu-item ul[data-leader="${leader}"]`
+      ).closest('.menu-item')
+       .querySelector('.card-header .badge.bg-secondary');
+      badge.textContent = `${cnt} reps`;
+    }
+
+    // Inicializa Sortable en todas las listas
+    document.querySelectorAll('ul.list-group').forEach(ul => {
+      Sortable.create(ul, {
+        group: 'shared',
+        animation: 150,
+        fallbackOnBody: true,
+        swapThreshold: 0.65,
+        onEnd: evt => {
+          updateCount(evt.from);
+          updateCount(evt.to);
+        }
+      });
+    });
+
+    // Redistribuye los reps de un líder eliminado para balancear hacia el ratio
+    function eliminateLeader(leader) {
+      const sourceUL = document.querySelector(`ul.list-group[data-leader="${leader}"]`);
+      if (!sourceUL) return;
+      const reps = Array.from(sourceUL.children);
+      // Elimina visualmente la tarjeta entera
+      sourceUL.closest('.menu-item').remove();
+
+      // Obtiene las otras listas activas
+      const targetULs = Array.from(document.querySelectorAll('ul.list-group'));
+
+      // Redistribución: siempre al menos cargado
+      reps.forEach(li => {
+        // Ordena las listas por cantidad actual ascendente
+        targetULs.sort((a, b) => a.children.length - b.children.length);
+        // Agrega el elemento al primer UL (menos cargado)
+        targetULs[0].appendChild(li);
+        updateCount(targetULs[0]);
+      });
+    }
+
+    // Serializa la nueva distribución antes de enviar
+    function prepareReassign() {
+      const data = {};
+      document.querySelectorAll('ul.list-group').forEach(ul => {
+        data[ul.dataset.leader] = Array.from(ul.children)
+                                       .map(li => li.dataset.rep);
+      });
+      document.getElementById('reassignments').value = JSON.stringify(data);
+    }
+  </script>
+</body>
+</html>

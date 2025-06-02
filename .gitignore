@@ -1,0 +1,55 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+pytest_cache/
+
+# Flask instance folder
+instance/
+.webassets-cache
+
+# Virtualenvs
+venv/
+env/
+.venv/
+
+# IDE/editor folders
+.vscode/
+.idea/
+*.suo
+*.user
+*.swp
+.DS_Store
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Excel uploads & outputs
+*.xls
+*.xlsx
+*.csv
+uploads/
+outputs/
+
+# Environment variables
+.env

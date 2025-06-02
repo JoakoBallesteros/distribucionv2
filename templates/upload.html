@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Sube la nómina</title>
+  <!-- Material Icons -->
+  <link href="https://fonts.googleapis.com/css?family=Material+Icons+Outlined" rel="stylesheet">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+</head>
+<body class="upload-page">
+  <div class="upload-card">
+    <form method="post" enctype="multipart/form-data" class="form-container">
+      {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+      {% endif %}
+      <div class="upload-area" id="drag-area">
+        <span class="material-icons-outlined upload-icon">file_upload</span>
+        <h3 class="dynamic-message">Drag & drop any file here</h3>
+        <label class="browse-files">
+          or <input type="file" name="file" class="default-file-input" accept=".csv,.xls,.xlsx" required>
+          <span class="browse-files-text">browse file</span> from device
+        </label>
+      </div>
+
+      <div class="file-block" id="file-block">
+        <div class="file-info">
+          <span class="material-icons-outlined file-icon">description</span>
+          <span class="file-name"></span> |
+          <span class="file-size"></span>
+        </div>
+        <span class="material-icons remove-file-icon" id="remove-file">delete</span>
+        <div class="progress-bar"></div>
+      </div>
+
+      <button type="submit" class="upload-button">Upload</button>
+    </form>
+  </div>
+
+  <script>
+    const dragArea   = document.getElementById('drag-area');
+    const inpFile    = dragArea.querySelector('.default-file-input');
+    const fileBlock  = document.getElementById('file-block');
+    const fileName   = fileBlock.querySelector('.file-name');
+    const fileSize   = fileBlock.querySelector('.file-size');
+    const removeBtn  = document.getElementById('remove-file');
+    const msg        = dragArea.querySelector('.dynamic-message');
+
+    ['dragenter','dragover','dragleave','drop'].forEach(evt=>{
+      dragArea.addEventListener(evt, e=>{
+        e.preventDefault(); e.stopPropagation();
+      });
+    });
+    ['dragenter','dragover'].forEach(evt=>{
+      dragArea.addEventListener(evt, ()=>{ 
+        dragArea.classList.add('active');
+        msg.textContent = 'Suelta para subir'; 
+      });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      dragArea.addEventListener(evt, ()=>{
+        dragArea.classList.remove('active');
+        msg.textContent = 'Drag & drop any file here';
+      });
+    });
+
+    dragArea.addEventListener('drop', e=>{
+      const file = e.dataTransfer.files[0];
+      if (file) showFile(file);
+    });
+    inpFile.addEventListener('change', ()=>{
+      const file = inpFile.files[0];
+      if (file) showFile(file);
+    });
+
+    function showFile(file){
+      fileName.textContent = file.name;
+      fileSize.textContent = (file.size/1024).toFixed(2) + ' KB';
+      fileBlock.style.display = 'flex';
+      dragArea.classList.remove('active');
+    }
+
+    removeBtn.addEventListener('click', ()=>{
+      inpFile.value = '';
+      fileBlock.style.display = 'none';
+    });
+  </script>
+</body>
+</html>

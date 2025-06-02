@@ -1,0 +1,105 @@
+/* fondo y centrar */
+body.upload-page {
+  margin: 0;
+  background: rgb(27, 45, 122);
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-family: 'Open Sans', sans-serif;
+}
+
+/* la tarjeta */
+.upload-card {
+  background: #f5f5f5;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 360px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  position: relative;
+  z-index: 1;
+}
+
+/* área drag & drop */
+.upload-area {
+  border: 2px dashed rgb(27, 45, 122);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  transition: background 0.3s ease;
+  cursor: pointer;
+}
+.upload-area.active {
+  background: rgba(106,27,154,0.1);
+}
+
+/* icono */
+.upload-icon {
+  font-size: 48px;
+  color: rgb(27, 45, 122);
+}
+
+/* mensaje principal */
+.dynamic-message {
+  margin: 1rem 0;
+  color: #333;
+}
+
+/* browse link */
+.browse-files input {
+  display: none;
+}
+.browse-files-text {
+  color: rgb(27, 45, 122);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* bloque de archivo seleccionado */
+.file-block {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  margin: 1rem 0;
+}
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+.file-icon {
+  font-size: 24px;
+  color: #6a1b9a;
+}
+.remove-file-icon {
+  cursor: pointer;
+  color: #c62828;
+}
+
+/* botón Upload */
+.upload-button {
+  width: 100%;
+  background: rgb(27, 45, 122);
+  border: none;
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 24px;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  transition: background 0.3s ease;
+}
+.upload-button:hover {
+  background: #4a148c;
+}
+
+/* animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.upload-card {
+  animation: fadeIn 0.8s ease-out;
+}

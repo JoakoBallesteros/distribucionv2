@@ -1,0 +1,141 @@
+/* ────────────────────────────────────────────────────────────────── */
+/*   Estilos generales (fondo, overlay, animaciones)               */
+/* ────────────────────────────────────────────────────────────────── */
+body.select-page {
+  margin: 0;
+  background: #032b5c;
+  height: 100%;
+  position: relative;
+  font-family: 'Open Sans', sans-serif;
+}
+body.select-page::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 0;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; }
+}
+
+/* ────────────────────────────────────────────────────────────────── */
+/*   Card principal y rejilla de líderes                            */
+/* ────────────────────────────────────────────────────────────────── */
+.wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 100vh;
+}
+.menu-card {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(12px);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 15px;
+  padding: 2rem;
+  max-width: 1200px;
+  width: 100%;
+  color: #fff;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+  animation: fadeIn 0.8s ease-out;
+}
+.menu-card h1 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px,1fr));
+  gap: 1.5rem;
+}
+
+/* ────────────────────────────────────────────────────────────────── */
+/*   Tarjeta de cada líder                                          */
+/* ────────────────────────────────────────────────────────────────── */
+.leader-card {
+  background: rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: background 0.3s ease;
+}
+.leader-card:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Labels y selects dentro de líder */
+.leader-card .form-label {
+  color: #e0e0e0;
+  font-weight: bold;
+}
+.leader-card .form-select {
+  background: rgba(255,255,255,0.8);
+  border: none;
+  margin-bottom: 1rem;
+}
+
+/* Botón “+ Agregar servicio” */
+.leader-card .btn-outline-light {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  border-color: rgba(255,255,255,0.6);
+}
+.leader-card .btn-outline-light:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+/* Botón Generar y ver Distribuciones */
+.btn-generate {
+  display: block;
+  margin: 2rem auto 0;
+  padding: 0.6rem 2rem;
+  background: #21cbf3;
+  border: none;
+  border-radius: 24px;
+  color: #032b5c;
+  font-weight: bold;
+  transition: background 0.3s ease;
+}
+.btn-generate:hover {
+  background: #1ba6c2;
+}
+
+/* ────────────────────────────────────────────────────────────────── */
+/*  Botón “×” para limpiar el horario                                */
+/* ────────────────────────────────────────────────────────────────── */
+/* El wrapper del select de hora debe tener position: relative */
+/* Asegura position: relative en el wrapper del servicio */
+.service-wrapper {
+  position: relative;
+}
+
+/* Botón de eliminar servicio */
+.clear-service-btn {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.8);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0;
+  z-index: 2;
+}
+
+.clear-service-btn:hover {
+  color: #ffffff;
+}
+
