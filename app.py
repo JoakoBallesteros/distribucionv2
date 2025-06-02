@@ -54,7 +54,7 @@ def upload():
 
 @app.route('/select/<filename>', methods=['GET','POST'])
 def select(filename):
-    # Lectura y limpieza
+    # --- Lectura y limpieza inicial ---
     path = os.path.join(UPLOAD_FOLDER, filename)
     df = (pd.read_excel(path) if filename.lower().endswith(('.xls','.xlsx'))
           else pd.read_csv(path))
@@ -69,42 +69,65 @@ def select(filename):
     all_services = sorted(df['SERVICIO'].dropna().unique())
 
     if request.method=='POST':
-        # 1) recojo horarios, puestos y skill opcional
-        start_times    = {L: request.form.get(f'start_{L}') for L in leaders}
-        positions      = {L: request.form.get(f'position_{L}') for L in leaders}
-        leader_skills  = {L: request.form.get(f'skill_{L}') for L in leaders}
+        # --- 1) Recojo horarios, puestos y lista de skills por líder ---
+        start_times   = {L: request.form.get(f'start_{L}') for L in leaders}
+        positions     = {L: request.form.get(f'position_{L}') for L in leaders}
+        leader_skills = {L: request.form.getlist(f'skill_{L}') for L in leaders}
+        # Si algún getlist devuelve [''], normalizamos a lista vacía
+        for L, lst in leader_skills.items():
+            if lst == [''] or lst == []:
+                leader_skills[L] = []
 
-        # 2) construyo ventanas (t0, t0+ASSIGN_WINDOW)
+        # --- 2) Construyo ventanas de asignación (t0, t0+ASSIGN_WINDOW) ---
         windows = {}
         windows_str = {}
         for L, st in start_times.items():
-            if not st: continue
+            if not st:
+                continue
             t0 = datetime.strptime(st,'%H:%M').time()
-            end = (datetime.combine(datetime.today(),t0)
+            end = (datetime.combine(datetime.today(), t0)
                    + timedelta(hours=ASSIGN_WINDOW)).time()
-            windows[L] = (t0,end)
+            windows[L] = (t0, end)
             windows_str[L] = (st, end.strftime('%H:%M'))
 
-        # 3) asignación inicial
+        # --- 3) Asignación inicial de reps ---
         assignments = {L: [] for L in leaders}
         counts      = {L: 0 for L in leaders}
+
+        # Recorro reps en orden de ingreso
         for _, row in df.sort_values('ING_TIME').iterrows():
-            rt = row['ING_TIME']
-            if rt is None: continue
+            rt  = row['ING_TIME']
+            if rt is None:
+                continue
             svc = row['SERVICIO']
-            # Busco líderes válidos: dentro de ventana y (si hay skill asignado, que coincida)
+
+            # 3.1) Encuentro candidatos válidos:
+            #       1) Que caigan en la ventana horaria
+            #       2) Si líder tiene lista de skills no vacía, que svc esté en esa lista
             cands = []
             for L,(a,b) in windows.items():
-                # comprueba ventana
-                if (a<=b and a<=rt<=b) or (a>b and (rt>=a or rt<=b)):
-                    # si líder L tiene skill, requerimos que svc == leader_skills[L]
-                    sk = leader_skills.get(L)
-                    if sk and sk.strip():
-                        if svc == sk:
-                            cands.append(L)
-                    else:
+                # Verifico ventana normal o cruzada por medianoche
+                in_window = False
+                if a <= b:
+                    in_window = (a <= rt <= b)
+                else:
+                    in_window = (rt >= a or rt <= b)
+                if not in_window:
+                    continue
+
+                sk_list = leader_skills.get(L, [])
+                if sk_list:
+                    # Si líder L tiene skills definidos, solo acepta si svc coincide con alguno
+                    if svc in sk_list:
                         cands.append(L)
-            if not cands: continue
+                else:
+                    # Si no definió ningún skill, acepta cualquiera
+                    cands.append(L)
+
+            if not cands:
+                continue
+
+            # 3.2) Elijo el candidato con menos reps asignados (balanceo simple)
             chosen = min(cands, key=lambda L: counts[L])
             assignments[chosen].append({
                 'rep'     : row['NOMBRE'],
@@ -114,18 +137,19 @@ def select(filename):
             })
             counts[chosen] += 1
 
-        # 4) guardo en session para futura eliminación/reasignación
+        # --- 4) Guardo en session los datos necesarios para re-eliminaciones/reasignaciones ---
         session['assignments'] = assignments
         session['windows']     = windows_str
         session['positions']   = positions
         session['skills']      = leader_skills
         session['filename']    = filename
 
-        # 5) determino “pusher” según jerarquía
-        under = [L for L,c in counts.items() if c<IDEAL_PER_LEADER]
+        # --- 5) Determino “pusher” (quien está más lejos del ideal según prioridad de puesto) ---
+        under = [L for L,c in counts.items() if c < IDEAL_PER_LEADER]
         pushers   = [L for L in under if positions[L]=='Pusher']
         referents = [L for L in under if positions[L]=='Referente de Líder']
         leaders_u = [L for L in under if positions[L]=='Líder']
+
         if pushers:
             p = min(pushers, key=lambda L: counts[L])
         elif referents:
@@ -135,9 +159,10 @@ def select(filename):
         else:
             p = None
 
-        # 6) genero y guardo Excel
+        # --- 6) Genero y guardo Excel de salida ---
         output = BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as wr:
+            # Hoja "Distribuciones"
             rows = []
             for L, infos in assignments.items():
                 for info in infos:
@@ -149,6 +174,8 @@ def select(filename):
                         'Estado'  : info['status']
                     })
             pd.DataFrame(rows).to_excel(wr, index=False, sheet_name='Distribuciones')
+
+            # Hoja "Resumen"
             resumen = []
             for L in leaders:
                 cnt = len(assignments[L])
@@ -159,13 +186,14 @@ def select(filename):
                     'Diferencia': cnt - IDEAL_PER_LEADER
                 })
             pd.DataFrame(resumen).to_excel(wr, index=False, sheet_name='Resumen')
+
         output.seek(0)
-        with open(os.path.join(OUTPUT_FOLDER,'Distribuciones.xlsx'),'wb') as f:
+        with open(os.path.join(OUTPUT_FOLDER, 'Distribuciones.xlsx'), 'wb') as f:
             f.write(output.getvalue())
 
-        # orden visual por hora de inicio
+        # Orden visual: por hora de inicio ascendente
         ordered = sorted(windows.keys(),
-                         key=lambda L: datetime.strptime(start_times[L],'%H:%M'))
+                         key=lambda L: datetime.strptime(start_times[L], '%H:%M'))
 
         return render_template('results.html',
                                assignments=assignments,
@@ -176,6 +204,7 @@ def select(filename):
                                pusher=p,
                                ideal=IDEAL_PER_LEADER)
 
+    # GET → mostrar formulario de configuración
     return render_template('select.html',
                            filename=filename,
                            leaders=leaders,
@@ -184,39 +213,50 @@ def select(filename):
 
 @app.route('/eliminate/<leader>', methods=['POST'])
 def eliminate(leader):
-    # recupero estado de session
+    # Recupero estado de session
     assignments = session.get('assignments', {})
     windows_str = session.get('windows', {})
     positions   = session.get('positions', {})
     skills      = session.get('skills', {})
     filename    = session.get('filename')
 
-    # extraigo reps de quien eliminamos
+    # Extraigo los reps del líder eliminado
     to_move = assignments.pop(leader, [])
 
-    # reconstruyo contadores y ventanas sin ese líder
+    # Reconstruyo contadores y ventanas sin ese líder
     counts = {L: len(v) for L,v in assignments.items()}
     windows = {}
     for L,(s,e) in windows_str.items():
-        if L==leader: continue
-        a = datetime.strptime(s,'%H:%M').time()
-        b = datetime.strptime(e,'%H:%M').time()
+        if L == leader: 
+            continue
+        a = datetime.strptime(s, '%H:%M').time()
+        b = datetime.strptime(e, '%H:%M').time()
         windows[L] = (a,b)
 
-    # redistribuyo intentando balancear al ideal
+    # Redistribuyo intentando balancear al ideal
     for info in to_move:
-        rt = datetime.strptime(info['ingreso'],'%H:%M').time()
+        rt  = datetime.strptime(info['ingreso'], '%H:%M').time()
         svc = info['service']
         valid = []
         for L,(a,b) in windows.items():
-            if (a<=b and a<=rt<=b) or (a>b and (rt>=a or rt<=b)):
-                sk = skills.get(L)
-                if sk and sk.strip():
-                    if svc == sk:
-                        valid.append(L)
-                else:
+            in_window = False
+            if a <= b:
+                in_window = (a <= rt <= b)
+            else:
+                in_window = (rt >= a or rt <= b)
+            if not in_window:
+                continue
+
+            sk_list = skills.get(L, [])
+            if sk_list:
+                if svc in sk_list:
                     valid.append(L)
-        if not valid: continue
+            else:
+                valid.append(L)
+
+        if not valid:
+            continue
+
         diff = {L: len(assignments[L]) - IDEAL_PER_LEADER for L in valid}
         chosen = min(diff, key=lambda L: diff[L])
         assignments[chosen].append(info)
@@ -238,7 +278,7 @@ def eliminate(leader):
 
 @app.route('/reassign/<filename>', methods=['POST'])
 def reassign(filename):
-    raw        = request.form.get('reassignments','{}')
+    raw        = request.form.get('reassignments', '{}')
     new_assign = json.loads(raw)
 
     path = os.path.join(UPLOAD_FOLDER, session.get('filename'))
@@ -304,3 +344,4 @@ def download(file_name):
 
 if __name__ == '__main__':
     app.run(debug=True)
+    

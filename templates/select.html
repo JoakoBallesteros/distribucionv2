@@ -8,6 +8,28 @@
     rel="stylesheet"
   >
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+  <style>
+    /* Si queremos un poco de espacio entre selects y botones */
+    .skill-wrapper {
+      position: relative;
+      margin-bottom: 0.5rem;
+    }
+    .remove-skill-btn {
+      position: absolute;
+      top: 50%;
+      right: 0.75rem;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: rgba(0,0,0,0.5);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 0;
+    }
+    .remove-skill-btn:hover {
+      color: rgba(0,0,0,0.8);
+    }
+  </style>
 </head>
 <body class="select-page">
   <div class="wrapper">
@@ -26,11 +48,7 @@
 
               <!-- Hora de inicio -->
               <label class="form-label">Inicio</label>
-              <select
-                name="start_{{ L }}"
-                class="form-select mb-2"
-                required
-              >
+              <select name="start_{{ L }}" class="form-select mb-2" required>
                 <option value="">-- Elige hora --</option>
                 {% for t in time_options %}
                   <option value="{{ t }}">{{ t }}</option>
@@ -39,29 +57,37 @@
 
               <!-- Puesto en la pirámide -->
               <label class="form-label">Puesto</label>
-              <select
-                name="position_{{ L }}"
-                class="form-select mb-2"
-                required
-              >
+              <select name="position_{{ L }}" class="form-select mb-2" required>
                 <option value="">-- Elige puesto --</option>
                 <option value="Líder">Líder</option>
                 <option value="Referente de Líder">Referente de Líder</option>
                 <option value="Pusher">Pusher</option>
               </select>
 
-              <!-- Skill (Servicio) opcional -->
-              <label class="form-label">Skill (Servicio) opcional</label>
-              <select
-                name="skill_{{ L }}"
-                class="form-select mb-2"
-              >
-                <option value="">-- Ninguno --</option>
-                {% for s in services %}
-                  <option value="{{ s }}">{{ s }}</option>
-                {% endfor %}
-              </select>
-
+              <!-- Skills (Servicios) opcional: permitimos agregar varios -->
+              <label class="form-label">Skills (Servicios) opcionales</label>
+              <div id="skills_{{ L }}">
+                <!-- Caso inicial: ningún skill preseleccionado -->
+                <div class="skill-wrapper">
+                  <select name="skill_{{ L }}" class="form-select">
+                    <option value="">-- Ninguno --</option>
+                    {% for s in services %}
+                      <option value="{{ s }}">{{ s }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button"
+                          class="remove-skill-btn"
+                          title="Eliminar skill"
+                          onclick="removeSkill(this)">
+                    &times;
+                  </button>
+                </div>
+              </div>
+              <button type="button"
+                      class="btn btn-outline-light btn-sm w-100 mb-2"
+                      onclick="addSkill('{{ L }}')">
+                + Agregar skill
+              </button>
             </div>
           {% endfor %}
         </div>
@@ -72,5 +98,42 @@
       </form>
     </div>
   </div>
+
+  <script>
+    // La lista completa de servicios (skills) en JSON
+    const SERVICES = JSON.parse('{{ services|tojson }}');
+
+    // Función que elimina un bloque de skill
+    function removeSkill(btn) {
+      btn.parentElement.remove();
+    }
+
+    // Función que agrega un nuevo <select> de skill dentro del contenedor del líder
+    function addSkill(leader) {
+      const container = document.getElementById(`skills_${leader}`);
+      const wrapper   = document.createElement('div');
+      wrapper.className = 'skill-wrapper';
+
+      const select = document.createElement('select');
+      select.name = `skill_${leader}`;
+      select.className = 'form-select mb-1';
+
+      let html = '<option value="">-- Ninguno --</option>';
+      SERVICES.forEach(svc => {
+        html += `<option value="${svc}">${svc}</option>`;
+      });
+      select.innerHTML = html;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'remove-skill-btn';
+      btn.title = 'Eliminar skill';
+      btn.innerHTML = '&times;';
+      btn.onclick = () => wrapper.remove();
+
+      wrapper.append(select, btn);
+      container.appendChild(wrapper);
+    }
+  </script>
 </body>
 </html>
