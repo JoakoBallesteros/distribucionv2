@@ -24,7 +24,7 @@ os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Constantes de negocio
 IDEAL_PER_LEADER = 21    # ratio objetivo
-ASSIGN_WINDOW    = 3     # ventana en horas para asignar reps
+ASSIGN_WINDOW    = 2     # ventana en horas para asignar reps
 
 # =========================
 # Helpers
