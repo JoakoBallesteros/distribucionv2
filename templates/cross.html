@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Cruce de datos</title>
+
+  <!-- Icono y fuentes -->
+  <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&family=Material+Icons+Outlined"
+        rel="stylesheet">
+
+  <!-- Reusa la estética del upload -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
+  <!-- Estilos extra para esta vista (puedes incluirlo dentro de upload.css si prefieres) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/cross.css') }}">
+</head>
+
+<body class="upload-page">
+  <div class="upload-card">
+    <div class="cross-header">
+      <span class="material-icons-outlined header-icon">compare_arrows</span>
+      <h1 class="cross-title">Cruce de datos</h1>
+      <p class="cross-subtitle">Completamos la nómina receptora con los datos del donante.</p>
+    </div>
+
+    <div class="meta">
+      <div class="meta-row">
+        <span class="meta-label">Donante:</span>
+        <span class="pill">{{ donor_file }}</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Receptora:</span>
+        <span class="pill pill-alt">{{ receiver_file }}</span>
+      </div>
+    </div>
+
+    <div class="button-col">
+      <a class="upload-button" href="{{ url_for('download', file_name=file_name) }}">
+        <span class="material-icons-outlined" style="vertical-align:-6px;margin-right:.35rem;">download</span>
+        Descargar nómina cruzada
+      </a>
+
+      <a class="ghost-button" href="{{ url_for('upload') }}">
+        <span class="material-icons-outlined" style="vertical-align:-6px;margin-right:.35rem;">arrow_back</span>
+        Volver
+      </a>
+    </div>
+  </div>
+</body>
+</html>

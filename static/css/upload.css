@@ -103,3 +103,86 @@ body.upload-page {
 .upload-card {
   animation: fadeIn 0.8s ease-out;
 }
+/* --- piezas para la vista de cruce (mismo look&feel que upload) --- */
+
+.cross-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.header-icon {
+  font-size: 40px;
+  color: rgb(27, 45, 122);
+}
+
+.cross-title {
+  margin: .25rem 0 0;
+  font-size: 1.35rem;
+  color: #222;
+  font-weight: 700;
+}
+
+.cross-subtitle {
+  margin: .25rem 0 0;
+  font-size: .95rem;
+  color: #666;
+}
+
+.meta {
+  margin: 1rem 0 1.25rem;
+  display: grid;
+  gap: .6rem;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+
+.meta-label {
+  font-weight: 600;
+  color: #333;
+  min-width: 88px;
+}
+
+.pill {
+  background: rgba(27,45,122,.08);
+  color: rgb(27, 45, 122);
+  border: 1px solid rgba(27,45,122,.2);
+  border-radius: 999px;
+  padding: .3rem .7rem;
+  font-size: .9rem;
+}
+
+.pill-alt {
+  background: rgba(0,0,0,.04);
+  color: #333;
+  border-color: rgba(0,0,0,.1);
+}
+
+.button-col {
+  display: grid;
+  gap: .6rem;
+  margin-top: .5rem;
+}
+
+/* botón secundario con la misma paleta */
+.ghost-button {
+  width: 100%;
+  display: inline-block;
+  text-align: center;
+  border: 2px solid rgb(27, 45, 122);
+  color: rgb(27, 45, 122);
+  padding: 0.65rem;
+  border-radius: 24px;
+  font-size: 1rem;
+  text-decoration: none;
+  background: transparent;
+  transition: all .25s ease;
+}
+
+.ghost-button:hover {
+  background: rgba(27,45,122,.08);
+}

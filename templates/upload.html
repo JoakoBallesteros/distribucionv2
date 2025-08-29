@@ -2,97 +2,144 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sube la nómina</title>
-  <!-- Material Icons -->
 
+  <!-- Favicon servido por Flask -->
   <link rel="icon" href="{{ url_for('static', filename='images/logo.png') }}" type="image/png">
 
+  <!-- Material Icons + Bootstrap -->
   <link href="https://fonts.googleapis.com/css?family=Material+Icons+Outlined" rel="stylesheet">
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
-    rel="stylesheet"
-  >
-      <link rel="shortcut icon" href="../static/images/logo.png" type="image/x-icon">
-    
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
+  <!-- Tu CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/upload.css') }}">
 </head>
 <body class="upload-page">
   <div class="upload-card">
-    <form method="post" enctype="multipart/form-data" class="form-container">
+    <form method="post" enctype="multipart/form-data" id="uploadForm" class="form-container">
       {% if error %}
         <div class="alert alert-danger">{{ error }}</div>
       {% endif %}
+
+      <!-- Zona drag & drop -->
       <div class="upload-area" id="drag-area">
         <span class="material-icons-outlined upload-icon">file_upload</span>
-        <h3 class="dynamic-message">Drag & drop any file here</h3>
+        <h3 class="dynamic-message" id="dynMsg">Arrastrá y soltá hasta 2 archivos (.xlsx/.xls/.csv)</h3>
+
+        <!-- Input REAL (multiple) -->
         <label class="browse-files">
-          or <input type="file" name="file" class="default-file-input" accept=".csv,.xls,.xlsx" required>
-          <span class="browse-files-text">browse file</span> from device
+          o <input
+              type="file"
+              name="files"
+              id="files"
+              class="default-file-input"
+              accept=".csv,.xls,.xlsx"
+              multiple
+            >
+          <span class="browse-files-text">buscar archivos</span> en tu dispositivo
         </label>
-      </div>
-
-      <div class="file-block" id="file-block">
-        <div class="file-info">
-          <span class="material-icons-outlined file-icon">description</span>
-          <span class="file-name"></span> |
-          <span class="file-size"></span>
+        <div class="text-muted" style="font-size:.9rem;margin-top:.25rem">
+          Si subís 2 archivos, se habilita el botón <b>“Cruzar datos”</b>.
         </div>
-        <span class="material-icons remove-file-icon" id="remove-file">delete</span>
-        <div class="progress-bar"></div>
       </div>
 
-      <button type="submit" class="upload-button">Upload</button>
+      <!-- Lista de archivos seleccionados -->
+      <div class="file-block" id="file-block" style="display:none;">
+        <div class="file-info w-100">
+          <span class="material-icons-outlined file-icon">description</span>
+          <div class="w-100">
+            <div id="file-list" class="mb-1"></div>
+            <div id="file-note" class="small text-muted"></div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-files" title="Quitar archivos">
+          Limpiar
+        </button>
+      </div>
+
+      <button type="submit" id="submitBtn" class="upload-button">📤 Subir</button>
     </form>
   </div>
 
   <script>
     const dragArea   = document.getElementById('drag-area');
-    const inpFile    = dragArea.querySelector('.default-file-input');
+    const filesInput = document.getElementById('files');
     const fileBlock  = document.getElementById('file-block');
-    const fileName   = fileBlock.querySelector('.file-name');
-    const fileSize   = fileBlock.querySelector('.file-size');
-    const removeBtn  = document.getElementById('remove-file');
-    const msg        = dragArea.querySelector('.dynamic-message');
+    const fileListEl = document.getElementById('file-list');
+    const fileNoteEl = document.getElementById('file-note');
+    const clearBtn   = document.getElementById('clear-files');
+    const submitBtn  = document.getElementById('submitBtn');
+    const dynMsg     = document.getElementById('dynMsg');
 
-    ['dragenter','dragover','dragleave','drop'].forEach(evt=>{
-      dragArea.addEventListener(evt, e=>{
-        e.preventDefault(); e.stopPropagation();
-      });
-    });
-    ['dragenter','dragover'].forEach(evt=>{
-      dragArea.addEventListener(evt, ()=>{ 
-        dragArea.classList.add('active');
-        msg.textContent = 'Suelta para subir'; 
-      });
-    });
-    ['dragleave','drop'].forEach(evt=>{
-      dragArea.addEventListener(evt, ()=>{
-        dragArea.classList.remove('active');
-        msg.textContent = 'Drag & drop any file here';
-      });
-    });
-
-    dragArea.addEventListener('drop', e=>{
-      const file = e.dataTransfer.files[0];
-      if (file) showFile(file);
-    });
-    inpFile.addEventListener('change', ()=>{
-      const file = inpFile.files[0];
-      if (file) showFile(file);
-    });
-
-    function showFile(file){
-      fileName.textContent = file.name;
-      fileSize.textContent = (file.size/1024).toFixed(2) + ' KB';
-      fileBlock.style.display = 'flex';
-      dragArea.classList.remove('active');
+    // ---- Util: limitar a máx 2 archivos usando DataTransfer
+    function setFilesLimited(fileList) {
+      const dt = new DataTransfer();
+      const limit = Math.min(2, fileList.length);
+      for (let i = 0; i < limit; i++) dt.items.add(fileList[i]);
+      filesInput.files = dt.files;
+      renderFiles();
     }
 
-    removeBtn.addEventListener('click', ()=>{
-      inpFile.value = '';
-      fileBlock.style.display = 'none';
+    // ---- Render listado
+    function renderFiles() {
+      const n = filesInput.files.length;
+
+      if (n === 0) {
+        fileBlock.style.display = 'none';
+        submitBtn.textContent = 'Subir';
+        dynMsg.textContent = 'Arrastrá y soltá hasta 2 archivos (.xlsx/.xls/.csv)';
+        return;
+      }
+
+      // Mostrar bloque
+      fileBlock.style.display = 'flex';
+      let html = '';
+      for (let i = 0; i < n; i++) {
+        const f = filesInput.files[i];
+        const sizeKB = (f.size/1024).toFixed(2);
+        html += `<div>• <strong>${f.name}</strong> <span class="text-muted">(${sizeKB} KB)</span></div>`;
+      }
+      fileListEl.innerHTML = html;
+
+      // Nota si trajo más de 2
+      fileNoteEl.textContent = (n === 2)
+        ? 'Se cruzarán estos dos archivos.'
+        : 'Se procesará un único archivo.';
+
+      // Cambiar texto del botón según cantidad
+      submitBtn.textContent = (n >= 2) ? 'Cruzar datos' : 'Subir';
+      dynMsg.textContent = (n >= 2)
+        ? 'Listo: 2 archivos detectados. Hacé clic en “Cruzar datos”.'
+        : 'Arrastrá y soltá hasta 2 archivos (.xlsx/.xls/.csv)';
+    }
+
+    // ---- Drag & Drop básico
+    ['dragenter','dragover','dragleave','drop'].forEach(evt=>{
+      dragArea.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); });
     });
+    ['dragenter','dragover'].forEach(evt=>{
+      dragArea.addEventListener(evt, ()=>{ dragArea.classList.add('active'); });
+    });
+    ['dragleave','drop'].forEach(evt=>{
+      dragArea.addEventListener(evt, ()=>{ dragArea.classList.remove('active'); });
+    });
+    dragArea.addEventListener('drop', e=>{
+      const fl = e.dataTransfer.files;
+      if (fl && fl.length) setFilesLimited(fl);
+    });
+
+    // ---- Cambio por selector
+    filesInput.addEventListener('change', ()=> setFilesLimited(filesInput.files));
+
+    // ---- Limpiar
+    clearBtn.addEventListener('click', ()=>{
+      filesInput.value = '';
+      renderFiles();
+    });
+
+    // Init
+    renderFiles();
   </script>
 </body>
 </html>
