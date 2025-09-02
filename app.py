@@ -735,16 +735,30 @@ def select(filename):
 def reassign(filename):
     raw        = request.form.get('reassignments', '{}')
     new_assign = json.loads(raw)
+
+    # 1) Usa el filename de la ruta; si falta, cae a session.
     if not filename:
         filename = session.get('filename')
-    forced_sheet = session.get('selected_sheet')
+
+    if not filename:
+        return render_template('upload.html',
+                               error='La sesión expiró o es inválida. Volvé a subir el archivo para reasignar.')
+
+    forced_sheet = session.get('selected_sheet')  # puede ser None, es OK
+
     try:
-        df, df_src, selected_sheet, _ = load_nomina(session.get('filename'), forced_sheet=forced_sheet)
+        df, df_src, selected_sheet, _ = load_nomina(filename, forced_sheet=forced_sheet)
     except Exception:
-        output = BytesIO(); wb = Workbook(); ws = wb.active
-        ws.title = selected_sheet or 'NOMINA'; wb.save(output); output.seek(0)
+        # 2) NO uses selected_sheet si falló antes de definirse
+        output = BytesIO()
+        wb = Workbook()
+        ws = wb.active
+        ws.title = (forced_sheet or 'NOMINA')
+        wb.save(output); output.seek(0)
         return send_file(output, as_attachment=True, download_name='Nomina_asignada.xlsx',
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    
+
 
     rep2leader = {}
     lookup = df.set_index('NOMBRE').to_dict('index')
