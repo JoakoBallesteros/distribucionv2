@@ -22,7 +22,7 @@ OUTPUT_FOLDER = os.path.join(UPLOAD_FOLDER, 'outputs')
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Constantes de negocio
-IDEAL_PER_LEADER = 21
+IDEAL_PER_LEADER = 21          # default, se puede sobreescribir desde la UI
 ASSIGN_WINDOW    = 2
 
 # Campos a copiar cuando se cruzan nóminas
@@ -511,6 +511,7 @@ def make_audit_sheets(df_full_src: pd.DataFrame, df_part_src: pd.DataFrame) -> T
                 rows.append([dni, nombre, cr, str(vr), str(vd)])
     diffs = pd.DataFrame(rows, columns=['DNI','Nombre','Campo','Receptora','Donante'])
     return no_match, diffs
+
 # =========================
 # Rutas
 # =========================
@@ -591,7 +592,12 @@ def cross():
     else:
         ws_nm.append(['OK'])
 
-    
+    # (opcional) podrías agregar una hoja 'Diffs' si querés:
+    # ws_diff = wb.create_sheet(title='Diffs')
+    # if not diffs.empty:
+    #     write_df_to_ws_preserving_nomina(ws_diff, diffs)
+    # else:
+    #     ws_diff.append(['Sin diferencias relevantes'])
 
     wb.save(output)
     output.seek(0)
@@ -618,6 +624,15 @@ def select(filename):
     all_services = sorted(df['SERVICIO'].dropna().astype(str).unique())
 
     if request.method == 'POST':
+        # NUEVO: leer ideal desde el form y guardarlo en sesión (fallback al default)
+        try:
+            ideal = int(request.form.get('ideal', IDEAL_PER_LEADER))
+            if ideal < 1:
+                ideal = IDEAL_PER_LEADER
+        except Exception:
+            ideal = IDEAL_PER_LEADER
+        session['ideal'] = ideal
+
         start_times   = {L: request.form.get(f'start_{L}') for L in leaders}
         positions     = {L: request.form.get(f'position_{L}') for L in leaders}
         leader_skills = {L: request.form.getlist(f'skill_{L}') for L in leaders}
@@ -627,7 +642,8 @@ def select(filename):
 
         windows = {}; windows_str = {}
         for L, st in start_times.items():
-            if not st: continue
+            if not st:
+                continue
             t0 = datetime.strptime(st,'%H:%M').time()
             end = (datetime.combine(datetime.today(), t0) + timedelta(hours=ASSIGN_WINDOW)).time()
             windows[L] = (t0, end)
@@ -637,20 +653,25 @@ def select(filename):
         counts      = {L: 0 for L in leaders}
         for _, row in df.sort_values('ING_TIME').iterrows():
             rt  = row['ING_TIME']
-            if rt is None: continue
+            if rt is None:
+                continue
             svc = str(row['SERVICIO'])
             cands = []
             for L, ab in windows.items():
-                if not ab: continue
+                if not ab:
+                    continue
                 a, b = ab
                 in_window = (a <= rt <= b) if (a <= b) else (rt >= a or rt <= b)
-                if not in_window: continue
+                if not in_window:
+                    continue
                 sk_list = leader_skills.get(L, [])
                 if sk_list:
-                    if svc in sk_list: cands.append(L)
+                    if svc in sk_list:
+                        cands.append(L)
                 else:
                     cands.append(L)
-            if not cands: continue
+            if not cands:
+                continue
             chosen = min(cands, key=lambda L: counts[L])
             assignments[chosen].append({
                 'rep'     : row['NOMBRE'],
@@ -668,14 +689,19 @@ def select(filename):
         session['selected_sheet'] = selected_sheet
         session['src_cols']       = list(df_src.columns)
 
-        under = [L for L,c in counts.items() if c < IDEAL_PER_LEADER]
+        # NUEVO: usar 'ideal' dinámico
+        under = [L for L,c in counts.items() if c < ideal]
         pushers   = [L for L in under if positions.get(L) == 'Pusher']
         referents = [L for L in under if positions.get(L) == 'Referente de Líder']
         leaders_u = [L for L in under if positions.get(L) == 'Líder']
-        if pushers:      p = min(pushers, key=lambda L: counts[L])
-        elif referents:  p = min(referents, key=lambda L: counts[L])
-        elif leaders_u:  p = min(leaders_u, key=lambda L: counts[L])
-        else:            p = None
+        if pushers:
+            p = min(pushers, key=lambda L: counts[L])
+        elif referents:
+            p = min(referents, key=lambda L: counts[L])
+        elif leaders_u:
+            p = min(leaders_u, key=lambda L: counts[L])
+        else:
+            p = None
 
         rep2leader = {}
         for L, infos in assignments.items():
@@ -699,18 +725,27 @@ def select(filename):
         except Exception:
             pass
 
+        # Resumen usando 'ideal' dinámico
         ws2 = wb.create_sheet(title='Resumen')
         ws2.append(['Líder', 'Ideal', 'Asignados', 'Diferencia'])
         for L in leaders:
             cnt = len(assignments[L])
-            ws2.append([L, IDEAL_PER_LEADER, cnt, cnt - IDEAL_PER_LEADER])
+            ws2.append([L, ideal, cnt, cnt - ideal])
 
         output.seek(0)
         wb.save(output); output.seek(0)
         with open(os.path.join(OUTPUT_FOLDER, 'Nomina_asignada.xlsx'), 'wb') as f:
             f.write(output.getvalue())
 
-        ordered = sorted(windows.keys(), key=lambda L: datetime.strptime(start_times[L], '%H:%M'))
+        # Ordenar sin romper si falta hora
+        def _key(L):
+            v = request.form.get(f'start_{L}')
+            try:
+                return datetime.strptime(v, '%H:%M')
+            except Exception:
+                return datetime(2000,1,1)
+        ordered = sorted(windows.keys(), key=_key)
+
         return render_template('results.html',
                                assignments=assignments,
                                ordered_leaders=ordered,
@@ -718,16 +753,19 @@ def select(filename):
                                positions=positions,
                                skills=leader_skills,
                                pusher=p,
-                               ideal=IDEAL_PER_LEADER,
+                               ideal=ideal,                 # <- pasar al template
                                filename=filename)
 
+    # GET: pasar ideal por defecto o el último guardado
+    ideal_default = session.get('ideal', IDEAL_PER_LEADER)
     return render_template('select.html',
                            filename=filename,
                            leaders=leaders,
                            time_options=time_options,
                            services=all_services,
                            sheets=all_sheets,
-                           selected_sheet=selected_sheet)
+                           selected_sheet=selected_sheet,
+                           ideal=ideal_default)           # <- para rellenar el input
 
 # Reasignar
 @app.route('/reassign/', defaults={'filename': None}, methods=['POST'])
@@ -757,8 +795,6 @@ def reassign(filename):
         wb.save(output); output.seek(0)
         return send_file(output, as_attachment=True, download_name='Nomina_asignada.xlsx',
                          mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    
-
 
     rep2leader = {}
     lookup = df.set_index('NOMBRE').to_dict('index')
@@ -787,8 +823,10 @@ def reassign(filename):
     c = Counter(rep2leader.values())
     ws2 = wb.create_sheet(title='Resumen')
     ws2.append(['Líder', 'Ideal', 'Asignados', 'Diferencia'])
+
+    ideal = session.get('ideal', IDEAL_PER_LEADER)   # <- usar el ideal elegido
     for L, cnt in sorted(c.items()):
-        ws2.append([L, IDEAL_PER_LEADER, cnt, cnt - IDEAL_PER_LEADER])
+        ws2.append([L, ideal, cnt, cnt - ideal])
 
     wb.save(output); output.seek(0)
     return send_file(output, as_attachment=True, download_name='Nomina_asignada.xlsx',
